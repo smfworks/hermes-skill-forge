@@ -555,3 +555,137 @@ export function requestEvolution(skillId: string): EvolutionEvent | null {
   broadcastChange();
   return event;
 }
+
+/**
+ * Create a new branch from a specific skill version.
+ */
+export function branchFromSkill(skillId: string, reason: string): { skill: Skill; branchPoint: BranchPoint } | null {
+  if (!store) {
+    store = generateSystemState();
+  }
+
+  const skill = store.skills.find((s) => s.id === skillId);
+  if (!skill) return null;
+
+  // Create a branch point
+  const branchPoint: BranchPoint = {
+    id: uuidv4(),
+    lineageId: skill.lineageId,
+    skillId: skill.id,
+    reason,
+    createdAt: new Date().toISOString(),
+  };
+
+  // Create a branched skill
+  const versionParts = skill.version.split('.');
+  const branchVersion = `${versionParts[0]}.${versionParts[1]}.0-experimental`;
+
+  const branchedSkill: Skill = {
+    ...skill,
+    id: uuidv4(),
+    version: branchVersion,
+    parentVersion: skill.version,
+    code: skill.code,
+    author: 'agent',
+    status: 'experimental',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  store.skills.push(branchedSkill);
+
+  // Update lineage
+  const lineage = store.lineages.find((l) => l.id === skill.lineageId);
+  if (lineage) {
+    lineage.branchPoints.push(branchPoint);
+  }
+
+  // Update graph
+  store.graph.nodes.push({
+    id: branchedSkill.id,
+    type: 'skill',
+    name: branchedSkill.name,
+    version: branchedSkill.version,
+    status: branchedSkill.status,
+    description: branchedSkill.description,
+    lineageId: branchedSkill.lineageId,
+    parentVersion: branchedSkill.parentVersion,
+  });
+
+  store.graph.edges.push({
+    id: `edge-branch-${branchedSkill.id}`,
+    source: skill.id,
+    target: branchedSkill.id,
+    type: 'branch',
+    label: 'branch',
+  });
+
+  // Add events
+  store.events.unshift({
+    id: uuidv4(),
+    timestamp: branchPoint.createdAt,
+    type: 'branch_point',
+    skillId: branchedSkill.id,
+    lineageId: skill.lineageId,
+    message: `Branch created from "${skill.name}" v${skill.version}`,
+    details: {
+      fromVersion: skill.version,
+      branchVersion: branchVersion,
+      reason,
+    },
+  });
+
+  broadcastChange();
+  return { skill: branchedSkill, branchPoint };
+}
+
+/**
+ * Start activity simulation for real-time updates.
+ */
+let activityInterval: NodeJS.Timeout | null = null;
+
+export function startActivitySimulation(intervalMs: number = 5000): void {
+  if (activityInterval) {
+    clearInterval(activityInterval);
+  }
+  activityInterval = setInterval(() => {
+    if (!store) {
+      store = generateSystemState();
+    }
+
+    // Generate a random evolution event
+    const skills = store.skills;
+    const skill = skills[Math.floor(Math.random() * skills.length)];
+    const eventTypes: EvolutionEvent['type'][] = ['skill_improved', 'skill_created'];
+    const type = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+
+    const event: EvolutionEvent = {
+      id: uuidv4(),
+      timestamp: new Date().toISOString(),
+      type,
+      skillId: skill.id,
+      lineageId: skill.lineageId,
+      message: type === 'skill_improved'
+        ? `Skill "${skill.name}" improved (success rate: ${(skill.performance.successRate * 100).toFixed(1)}%)`
+        : `New skill variant created`,
+      details: {
+        skillId: skill.id,
+        version: skill.version,
+      },
+    };
+
+    store.events.unshift(event);
+    if (store.events.length > 100) {
+      store.events.pop();
+    }
+
+    broadcastChange();
+  }, intervalMs);
+}
+
+export function stopActivitySimulation(): void {
+  if (activityInterval) {
+    clearInterval(activityInterval);
+    activityInterval = null;
+  }
+}

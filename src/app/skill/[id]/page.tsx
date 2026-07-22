@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -12,9 +12,10 @@ import {
   Edit,
   Zap,
   Share2,
+  Plus,
 } from "lucide-react";
 import type { Skill, Lineage, SystemState } from "@/lib/types";
-import { getSystemState, editSkill, requestEvolution } from "@/lib/mock-data";
+import { getSystemState, editSkill, requestEvolution, branchFromSkill } from "@/lib/mock-data";
 import VersionTimeline from "@/lib/components/VersionTimeline";
 import CodeDiffViewer from "@/lib/components/CodeDiffViewer";
 
@@ -26,12 +27,38 @@ export default function SkillPage() {
   const [editing, setEditing] = useState(false);
   const [editCode, setEditCode] = useState("");
   const [evolving, setEvolving] = useState(false);
+  const [branching, setBranching] = useState(false);
+  const [branchReason, setBranchReason] = useState("");
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     const data = getSystemState();
     setState(data);
     setLoading(false);
-  }, []);
+
+    // Connect to SSE for real-time updates
+    const es = new EventSource("/api/events/stream");
+    eventSourceRef.current = es;
+
+    es.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "update" && msg.data) {
+        // Check if the current skill still exists in the updated state
+        const currentSkill = msg.data.skills.find((s: Skill) => s.id === skillId);
+        if (currentSkill) {
+          setState(msg.data);
+        }
+      }
+    };
+
+    es.onerror = (err) => {
+      console.error("SSE error:", err);
+    };
+
+    return () => {
+      es.close();
+    };
+  }, [skillId]);
 
   if (loading || !state) {
     return (
@@ -89,6 +116,23 @@ export default function SkillPage() {
     }, 1000);
   };
 
+  const handleBranch = async () => {
+    if (!branchReason.trim()) return;
+    setBranching(true);
+    const result = await fetch("/api/branch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ skillId: skill.id, reason: branchReason }),
+    });
+    const data = await result.json();
+    if (data.success && data.skill) {
+      // Redirect to the new branched skill
+      window.location.href = `/skill/${data.skill.id}`;
+    }
+    setBranching(false);
+    setBranchReason("");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-cinematic hero-gradient">
       {/* Header */}
@@ -113,6 +157,20 @@ export default function SkillPage() {
               >
                 <Edit className="w-4 h-4" />
                 Edit Skill
+              </button>
+              <button
+                onClick={() => {
+                  const reason = prompt("Enter a reason for branching:", "Experimental approach to improve performance");
+                  if (reason) {
+                    setBranchReason(reason);
+                    handleBranch();
+                  }
+                }}
+                disabled={branching}
+                className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                {branching ? "Branching..." : "Branch"}
               </button>
               <button
                 onClick={handleRequestEvolution}
