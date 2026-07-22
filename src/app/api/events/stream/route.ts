@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getSystemState, subscribeToState, startActivitySimulation, stopActivitySimulation } from "@/lib/mock-data";
+import { getSystemState, subscribeToState, startActivitySimulation } from "@/lib/mock-data";
 
 // Start activity simulation when the server starts
 let simulationStarted = false;
@@ -44,10 +44,17 @@ export async function GET(request: NextRequest) {
       }, 15000);
 
       // Cleanup on disconnect
+      let cleanedUp = false;
       request.signal.addEventListener("abort", () => {
+        if (cleanedUp) return;
+        cleanedUp = true;
         unsubscribe();
         clearInterval(heartbeat);
-        controller.close();
+        try {
+          controller.close();
+        } catch (e) {
+          // Controller already closed
+        }
       });
     },
   });
