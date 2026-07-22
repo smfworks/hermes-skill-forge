@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.out/
+.cache/
+.env
+.env.local
+.env.development
+.env.production
+*.log
+.DS_Store
+*.pem
+LICENSE.local
