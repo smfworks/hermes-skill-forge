@@ -184,6 +184,27 @@ export default function SkillPage() {
                 )}
                 Request Evolution
               </button>
+              <button
+                onClick={async () => {
+                  const response = await fetch(`/api/export?skillId=${skill.id}`);
+                  const data = await response.json();
+                  if (data.package) {
+                    const blob = new Blob([JSON.stringify(data.package, null, 2)], {
+                      type: "application/json",
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `${skill.name.replace(/\s+/g, "-")}-v${skill.version}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }
+                }}
+                className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-700 transition-colors flex items-center gap-2"
+              >
+                <Share2 className="w-4 h-4" />
+                Export
+              </button>
             </div>
           </div>
         </div>
@@ -357,6 +378,38 @@ export default function SkillPage() {
             </div>
           </section>
         )}
+
+        {/* Export */}
+        <section className="fade-in">
+          <h2 className="text-lg font-semibold text-white mb-4">Export Skill Package</h2>
+          <div className="bg-gradient-card border border-slate-800 rounded-xl p-6">
+            <p className="text-sm text-slate-400 mb-4">
+              Export this skill as a reusable package for other Hermes instances.
+              The package includes the skill code, version history, and evaluation data.
+            </p>
+            <button
+              onClick={async () => {
+                const response = await fetch(`/api/export?skillId=${skill.id}`);
+                const data = await response.json();
+                if (data.package) {
+                  const blob = new Blob([JSON.stringify(data.package, null, 2)], {
+                    type: "application/json",
+                  });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${skill.name.replace(/\s+/g, "-")}-v${skill.version}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }
+              }}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-sm font-medium text-white flex items-center gap-2 transition-colors"
+            >
+              <Share2 className="w-4 h-4" />
+              Download Skill Package
+            </button>
+          </div>
+        </section>
       </main>
     </div>
   );
