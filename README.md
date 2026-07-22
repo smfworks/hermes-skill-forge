@@ -1,5 +1,9 @@
 # Hermes Skill Forge
 
+<div align="center">
+  <img src="public/logo.png" alt="Hermes Skill Forge" width="600" />
+</div>
+
 > Visual studio for observing, understanding, editing, and steering Hermes skill evolution.
 
 Hermes Skill Forge is an open-source tool that makes Hermes' unique strength —
@@ -26,6 +30,10 @@ Real-time stream of skill-related events with contextual links.
 
 ### Export & Packaging
 Clean export of skills as reusable packages for other Hermes users.
+
+## Screenshot
+
+![Skill Forge Dashboard](public/screenshot.png)
 
 ## Quick Start
 
