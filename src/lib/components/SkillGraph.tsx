@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import ReactFlow, {
   Controls,
   Background,
@@ -96,21 +96,25 @@ export default function SkillGraph({ skills, lineages, graph }: SkillGraphProps)
     setEdges(rfEdges);
   }, [graph]);
 
-  const onInit = useCallback((instance: any) => {
+  useEffect(() => {
+    // Position nodes in a circle
     const centerX = 500;
     const centerY = 400;
     const radius = 300;
     const nodeCount = nodes.length;
 
-    nodes.forEach((node, index) => {
+    const updatedNodes = nodes.map((node, index) => {
       const angle = (index / nodeCount) * 2 * Math.PI;
       const x = centerX + radius * Math.cos(angle);
       const y = centerY + radius * Math.sin(angle);
-      instance.setNodePosition(node.id, { x, y });
+      return {
+        ...node,
+        position: { x, y },
+      };
     });
 
-    instance.fitView({ duration: 1000 });
-  }, [nodes]);
+    setNodes(updatedNodes);
+  }, []);
 
   return (
     <div className="bg-gradient-card border border-slate-800 rounded-xl p-6">
@@ -119,7 +123,6 @@ export default function SkillGraph({ skills, lineages, graph }: SkillGraphProps)
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
-          onInit={onInit}
           fitView
           attributionPosition="bottom-left"
         >
