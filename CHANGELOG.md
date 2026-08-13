@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.1] — 2026-08-13
+
+### Fixed
+- `/lineages` and `/lineage/[id]` now fetch `/api/state` instead of a second client store
+
 ## [0.2.0] — 2026-08-13
 
 ### Fixed

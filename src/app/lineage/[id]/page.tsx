@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { GitBranch, Search, Code, BarChart2, Zap } from "lucide-react";
-import type { SystemState, Lineage, Skill } from "@/lib/types";
-import { getSystemState } from "@/lib/mock-data";
+import type { SystemState } from "@/lib/types";
 import VersionTimeline from "@/lib/components/VersionTimeline";
 
 export default function LineagePage() {
@@ -15,9 +14,13 @@ export default function LineagePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const data = getSystemState();
-    setState(data);
-    setLoading(false);
+    fetch("/api/state")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: SystemState) => setState(data))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading || !state) {
