@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   const stream = new ReadableStream({
     start(controller) {
-      const send = (data: any) => {
+      const send = (data: unknown) => {
         controller.enqueue(`data: ${JSON.stringify(data)}\n\n`);
       };
 
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         clearInterval(heartbeat);
         try {
           controller.close();
-        } catch (e) {
+        } catch {
           // Controller already closed
         }
       });
@@ -63,9 +63,7 @@ export async function GET(request: NextRequest) {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Cache-Control",
+      Connection: "keep-alive",
     },
   });
 }

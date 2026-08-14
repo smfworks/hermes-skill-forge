@@ -14,8 +14,7 @@ import {
   Share2,
   Plus,
 } from "lucide-react";
-import type { Skill, Lineage, SystemState } from "@/lib/types";
-import { getSystemState, editSkill, requestEvolution, branchFromSkill } from "@/lib/mock-data";
+import type { Skill, SystemState } from "@/lib/types";
 import VersionTimeline from "@/lib/components/VersionTimeline";
 import CodeDiffViewer from "@/lib/components/CodeDiffViewer";
 
@@ -32,11 +31,14 @@ export default function SkillPage() {
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    const data = getSystemState();
-    setState(data);
-    setLoading(false);
+    fetch("/api/state")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: SystemState) => setState(data))
+      .finally(() => setLoading(false));
 
-    // Connect to SSE for real-time updates
     const es = new EventSource("/api/events/stream");
     eventSourceRef.current = es;
 
@@ -97,40 +99,55 @@ export default function SkillPage() {
     setEditing(true);
   };
 
-  const handleSaveEdit = () => {
-    editSkill(skill.id, editCode);
+  const handleSaveEdit = async () => {
+    const response = await fetch("/api/skills/edit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ skillId: skill.id, code: editCode }),
+    });
+    if (!response.ok) return;
+    const payload = await response.json();
     setEditing(false);
-    // Refresh state
-    const data = getSystemState();
-    setState(data);
+    if (payload.skill?.id) {
+      window.location.href = `/skill/${payload.skill.id}`;
+    }
   };
 
   const handleRequestEvolution = async () => {
     setEvolving(true);
-    requestEvolution(skill.id);
-    // Simulate async
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/evolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skillId: skill.id }),
+      });
+      if (response.ok) {
+        const data = await fetch("/api/state").then((res) => res.json());
+        setState(data);
+      }
+    } finally {
       setEvolving(false);
-      const data = getSystemState();
-      setState(data);
-    }, 1000);
+    }
   };
 
-  const handleBranch = async () => {
-    if (!branchReason.trim()) return;
+  const handleBranch = async (reason: string) => {
+    if (!reason.trim()) return;
     setBranching(true);
-    const result = await fetch("/api/branch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ skillId: skill.id, reason: branchReason }),
-    });
-    const data = await result.json();
-    if (data.success && data.skill) {
-      // Redirect to the new branched skill
-      window.location.href = `/skill/${data.skill.id}`;
+    try {
+      const result = await fetch("/api/branch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skillId: skill.id, reason }),
+      });
+      if (!result.ok) return;
+      const data = await result.json();
+      if (data.success && data.skill) {
+        window.location.href = `/skill/${data.skill.id}`;
+      }
+    } finally {
+      setBranching(false);
+      setBranchReason("");
     }
-    setBranching(false);
-    setBranchReason("");
   };
 
   return (
@@ -162,8 +179,7 @@ export default function SkillPage() {
                 onClick={() => {
                   const reason = prompt("Enter a reason for branching:", "Experimental approach to improve performance");
                   if (reason) {
-                    setBranchReason(reason);
-                    handleBranch();
+                    handleBranch(reason);
                   }
                 }}
                 disabled={branching}
@@ -347,6 +363,31 @@ export default function SkillPage() {
             </div>
           </div>
         </section>
+
+        {editing && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold text-white mb-4">Edit skill code</h2>
+            <textarea
+              value={editCode}
+              onChange={(e) => setEditCode(e.target.value)}
+              className="w-full h-64 bg-slate-900 border border-slate-700 rounded-lg p-3 font-mono text-sm text-slate-200"
+            />
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm"
+              >
+                Save new version
+              </button>
+              <button
+                onClick={() => setEditing(false)}
+                className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* Version Timeline */}
         <section className="mb-8 fade-in">

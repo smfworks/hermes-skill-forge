@@ -3,10 +3,11 @@ node_modules/
 .out/
 .cache/
 .env
-.env.local
+.env*.local
 .env.development
 .env.production
 *.log
 .DS_Store
 *.pem
 LICENSE.local
+tsconfig.tsbuildinfo

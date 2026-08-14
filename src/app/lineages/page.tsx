@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { GitBranch, Search, Code, BarChart2 } from "lucide-react";
-import type { SystemState, Lineage, Skill } from "@/lib/types";
-import { getSystemState } from "@/lib/mock-data";
+import type { SystemState } from "@/lib/types";
 
 export default function LineagesPage() {
   const [state, setState] = useState<SystemState | null>(null);
@@ -12,9 +11,13 @@ export default function LineagesPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const data = getSystemState();
-    setState(data);
-    setLoading(false);
+    fetch("/api/state")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: SystemState) => setState(data))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading || !state) {

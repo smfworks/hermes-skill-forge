@@ -12,8 +12,7 @@ import {
   BarChart3,
   Clock,
 } from "lucide-react";
-import type { SystemState, Skill, Lineage } from "@/lib/types";
-import { getSystemState } from "@/lib/mock-data";
+import type { SystemState } from "@/lib/types";
 import SkillGraph from "@/lib/components/SkillGraph";
 import EvolutionFeed from "@/lib/components/EvolutionFeed";
 
@@ -23,9 +22,13 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const data = getSystemState();
-    setState(data);
-    setLoading(false);
+    fetch("/api/state")
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: SystemState) => setState(data))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading || !state) {
